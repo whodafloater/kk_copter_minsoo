@@ -7,10 +7,12 @@
 //
 // Modified by Minsoo Kim
 //
+// Modified by Tom Gray Dec 30,2012
+//
 // Optimized for Korean Blue Board ( www.kkmulticopter.kr )
 // supports 168 and 328 
 //
-// Copter Types*: SINGLE_COPTER, DUAL_COPTER, TWIN_COPTER, TRI_COPTER, QUAD_COPTER, QUAD_X_COPTER, Y4_COPTER, HEX_COPTER, Y6_COPTER
+// Copter Types*: SINGLE_COPTER, SINGLE_AIRPLANE, DUAL_COPTER, TWIN_COPTER, TRI_COPTER, QUAD_COPTER, QUAD_X_COPTER, Y4_COPTER, HEX_COPTER, Y6_COPTER
 //
 // Config Modes (at startup)
 // =================
@@ -18,6 +20,8 @@
 //
 // Version History
 // ==========
+// Dec 30, 2012 Tom Gray. Added SINGLE_AIRPLANE.
+//
 // _KR_v1.5	TwinCopter was added.
 //			Y4Copter was added.
 //			TriCopter Servo Reverse Pin was added(M5)
@@ -46,6 +50,24 @@
 //			used XXcontrol v1.0i
 
 /*
+
+single_airplane
+                         M1 CCW
+                          |
+                          |
+
+                         M2 (Servo) upper rudder
+                          |
+                          |
+            M5 ----------   ---------- M3
+   left elevon  (Servo)   |   (Servo) right elevon
+                          |
+                         M4 (Servo) optional lower rudder
+
+   M2 and M4 common mode with YAW control
+   M5 and M3 common mode with PITCH control
+   M5 and M3 differential mode with ROLL control
+
 Single
                     M1 CCW
                      |
@@ -56,8 +78,8 @@ Single
                     M2 (Servo)
                      |
                      |
-        M5 ----    ----M3
-    (Servo)      |     (Servo)
+            M5 ----    ----M3
+        (Servo)      |     (Servo)
                      |
                     M4 (Servo)
 
@@ -69,32 +91,32 @@ Dual
 
                      |
                      |
-        M3 ----------
-    (Servo)      |
+             M3 ----------
+        (Servo)      |
                      |
                     M4 (Servo)
 
 Twin
-                / --- \
+                 / --- \
                /    |    \ 
-         M1 CW  |     M2 CCW
-                     |
-            M3     |        M4
-        (Servo)  |    (Servo)
-                     |  
-			|  
+             M1 CW  |     M2 CCW
+                    |
+             M3     |        M4
+           (Servo)  |    (Servo)
+                    |
+	        		|  
                     M5 (Tail Servo, Optional)
                     M6 (Tail Servo Reverse, Optional)
 
 Tri   
  		  
          M1 CW          M2 CCW
-              \           / 
-                \ --- /
-                  |   |
-                   --- 
-                     |  
-			|  
+             \           / 
+               \ --- /
+                |   |
+                 --- 
+                  |  
+	        		|  
                     M3 CCW   M4=Tail Servo or M5=Tail Servo Reverse
 
 Quad
@@ -155,10 +177,11 @@ Y6
 
 /* ----------- Configuration -----------  */
 //#define SINGLE_COPTER
+#define  SINGLE_AIRPLANE
 //#define DUAL_COPTER
 //#define TWIN_COPTER
 //#define TRI_COPTER
-#define QUAD_COPTER
+//#define QUAD_COPTER
 //#define QUAD_X_COPTER
 //#define Y4_COPTER
 //#define HEX_COPTER
@@ -257,7 +280,7 @@ bool Armed;
 uint16_t GainInADC[3];				// ADC result
 uint16_t GainIn[3];					// = GainInADC[3]/10
 
-#ifdef SINGLE_COPTER
+#if defined(SINGLE_COPTER) || defined(SINGLE_AIRPLANE )
 int16_t LowpassOutServo[3];			// Lowpass Out
 #elif defined(DUAL_COPTER) || defined(TWIN_COPTER)
 int16_t LowpassOutServo[2];
@@ -265,7 +288,7 @@ int16_t LowpassOutServo[2];
 int16_t LowpassOutYaw;
 #endif
 
-#if defined(SINGLE_COPTER) || defined(DUAL_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER)
+#if defined(SINGLE_COPTER) || defined(SINGLE_AIRPLANE) || defined(DUAL_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER)
 uint16_t ServoPPMRateDivider = 0;
 #endif
 
@@ -299,7 +322,7 @@ int16_t MotorOut1;
 int16_t MotorOut2;
 int16_t MotorOut3;
 int16_t MotorOut4;
-#if defined(SINGLE_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER) || defined(HEX_COPTER) || defined(Y6_COPTER)
+#if defined(SINGLE_COPTER) || defined(SINGLE_AIRPLANE) || defined(TWIN_COPTER) || defined(TRI_COPTER) || defined(HEX_COPTER) || defined(Y6_COPTER)
 int16_t MotorOut5;
 #endif
 #if defined(TWIN_COPTER) || defined(HEX_COPTER) || defined(Y6_COPTER)
@@ -426,7 +449,7 @@ void setup(void)
 	M2_DIR 				= OUTPUT;
 	M3_DIR 			 	= OUTPUT;
 	M4_DIR 			 	= OUTPUT;
-#if defined(SINGLE_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER) || defined(HEX_COPTER) || defined(Y6_COPTER)
+#if defined(SINGLE_COPTER) || defined(SINGLE_AIRPLANE) || defined(TWIN_COPTER) || defined(TRI_COPTER) || defined(HEX_COPTER) || defined(Y6_COPTER)
 	M5_DIR 				= OUTPUT;
 #endif
 #if defined(TWIN_COPTER) || defined(HEX_COPTER) || defined(Y6_COPTER)
@@ -471,7 +494,7 @@ void setup(void)
 	TIFR2  = 0;
 	TCNT2 = 0;		// reset counter
 
-#if defined(SINGLE_COPTER) || defined(DUAL_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER)
+#if defined(SINGLE_COPTER) || defined(SINGLE_AIRPLANE) || defined(DUAL_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER)
 	// calculate Servo Rate divider
 	ServoPPMRateDivider = 0;
 	do {
@@ -480,7 +503,8 @@ void setup(void)
 	} while (i>50);
 #endif
 
-#ifdef SINGLE_COPTER
+
+#if defined(SINGLE_COPTER) || defined(SINGLE_AIRPLANE)
 	LowpassOutServo[ROLL]	= 84;					// Center
 	LowpassOutServo[PITCH]	= 84;					// Center
 	LowpassOutServo[YAW]	= 84;					// Center
@@ -514,8 +538,25 @@ void setup(void)
 
 	sei();											// Global Interrupts 
 
+
+// this doe not work ??
+#if defined(SINGLE_AIRPLANE)
+	MotorOut1 = 0;
+	MotorOut2 = 84;		// 84;
+	MotorOut3 = 84;		// 84;
+	MotorOut4 = 94;		// 84 + 84/8; Adjust LowPassOutValue
+	MotorOut5 = 94;		// 84 + 84/8; Adjust LowPassOutValue
+    Armed=true;
+    output_motor_ppm();		// center the servos
+    output_motor_ppm();		// center the servos
+    output_motor_ppm();		// center the servos
+    Armed=false;
+#endif
+
+
 	// 2 second delay
-	delay_ms(1500);
+//	delay_ms(1500);
+	delay_ms(100);
 	
 	ReadGainPots();
 	ReadGainPots();
@@ -537,15 +578,29 @@ void setup(void)
 	    Config.RxChannel4ZeroOffset  = 0;
 
 		// flash LED 3 times
+		for (i=0;i<6;i++)
+		{
+			LED = 1;
+			delay_ms(150);
+			LED = 0;
+			delay_ms(150);
+		}
+		// 5 Seconds Delay, for binding
+		for (i=0;i<20;i++)
+        {
+			LED = 1;
+			delay_ms(50);
+			LED = 0;
+			delay_ms(50);
+        }
+		// flash LED 3 times
 		for (i=0;i<3;i++)
 		{
 			LED = 1;
-			delay_ms(25);
+			delay_ms(150);
 			LED = 0;
-			delay_ms(25);
+			delay_ms(150);
 		}
-		// 5 Seconds Delay, for binding
-		delay_ms(3750);
 
 		RxChannel1ZeroOffset = RxChannel2ZeroOffset = RxChannel4ZeroOffset = 0;
 		
@@ -564,6 +619,12 @@ void setup(void)
 	    Config.RxChannel2ZeroOffset  = RxChannel2ZeroOffset;
 	    Config.RxChannel3ZeroOffset  = 1120;
 	    Config.RxChannel4ZeroOffset  = RxChannel4ZeroOffset;
+
+// flash LED, Ending Sign
+		LED = 1;
+		delay_ms(150);
+		LED = 0;
+		delay_ms(150);
 
 		// Store gyro direction to EEPROM
 		Save_Config_to_EEPROM();
@@ -637,14 +698,14 @@ void setup(void)
 
 		Armed = true;	// override so that output_motor_pwm() won't quit early
 		PWM_Low_Pulse_Interval = ((1000000UL / 50) - 2000)/10;	// set to 50Hz
-#if defined(SINGLE_COPTER) || defined(DUAL_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER)
+#if defined(SINGLE_COPTER) || defined(SINGLE_AIRPLANE) || defined(DUAL_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER)
 		ServoPPMRateDivider = 1;	// since we have already set to 50Hz
 #endif
 		
 		while (1)	// loop forever
 		{
 			RxGetChannels();
-#ifdef SINGLE_COPTER
+#if defined(SINGLE_COPTER) || defined(SINGLE_AIRPLANE)
 			MotorOut1 = RxInCollective;
 			MotorOut2 = 140;		// Center: 140
 			MotorOut3 = 140;
@@ -673,6 +734,11 @@ void setup(void)
 			MotorOut2 = RxInCollective;
 			MotorOut3 = RxInCollective;
 			MotorOut4 = RxInCollective;
+
+//			MotorOut1 = RxInCollective;
+//			MotorOut2 = RxInPitch;
+//			MotorOut3 = RxInRoll;
+//			MotorOut4 = RxInYaw;
 #elif defined(HEX_COPTER) ||  defined(Y6_COPTER)
 			MotorOut1 = RxInCollective;
 			MotorOut2 = RxInCollective;
@@ -697,13 +763,18 @@ void loop(void)
 
 	RxGetChannels();
 
+#if defined(SINGLE_AIRPLANE)
+// once armed, never unarm ... want to function as a glider too.
+if (!Armed) {
+#endif
+
 	if (RxInCollective < 0) {
 		// check for stick arming (Timer2 @ 8MHz/1024 = 7812.5KHz)
 		// arm: yaw right (>60), dis-arm: yaw left (<-60)
 		Change_Arming += (uint8_t) (TCNT2 - Arming_TCNT2);
 		Arming_TCNT2 = TCNT2;
 
-		if (!Armed) {		// nb to switch to Right-Side Arming: if (!Armed) {
+		if (!Armed) {		// nb to switch to Right-Side Arming: 
 			if (RxInYaw<STICK_ARMING || abs(RxInPitch) > 30) 	Change_Arming = 0;		// re-set count
 		} else {
 			if (RxInYaw>-STICK_ARMING || abs(RxInPitch) > 30) 	Change_Arming = 0;		// re-set count
@@ -820,16 +891,31 @@ void loop(void)
 		}
 
 	}
+#if defined(SINGLE_AIRPLANE)
+}
+#endif
 
 	//--- Read gyros ---
 	ReadGyros(false);
 
 	//--- Start mixing by setting collective to motor input 1,2,3,4 and 5,6
-#ifndef SINGLE_COPTER
+#if  !(defined(SINGLE_COPTER) || defined(SINGLE_AIRPLANE))
 	if (RxInCollective > MAX_COLLECTIVE) RxInCollective = MAX_COLLECTIVE;
 #endif
 
-#ifdef SINGLE_COPTER
+#if defined(SINGLE_AIRPLANE)
+	MotorOut2 = 84;		// 84;
+	MotorOut3 = 84;		// 84;
+	MotorOut4 = 94;		// 84 + 84/8; Adjust LowPassOutValue
+	MotorOut5 = 94;		// 84 + 84/8; Adjust LowPassOutValue
+	if (!Armed) {
+	  MotorOut1 = 0;
+      Armed=true;
+      output_motor_ppm();		// center the servos
+      Armed=false;
+     }
+	MotorOut1 = RxInCollective;
+#elif defined(SINGLE_COPTER)
 	MotorOut1 = RxInCollective;
 	MotorOut2 = 84;		// 84;
 	MotorOut3 = 84;		// 84;
@@ -885,7 +971,16 @@ void loop(void)
 		RxInRoll -= gyroADC[ROLL];
 	}
 
-#ifdef SINGLE_COPTER
+#if defined(SINGLE_AIRPLANE)
+	RxInRoll += LowpassOutServo[ROLL];
+	RxInRoll = (RxInRoll >> 3);
+	LowpassOutServo[ROLL] -= RxInRoll;
+
+    // differential mode roll but assume servos are mounted mirrored
+    // so drive is common mode
+	MotorOut3 -= LowpassOutServo[ROLL];
+	MotorOut5 -= LowpassOutServo[ROLL];
+#elif defined(SINGLE_COPTER)
 	RxInRoll += LowpassOutServo[ROLL];
 	RxInRoll = (RxInRoll >> 3);
 	LowpassOutServo[ROLL] -= RxInRoll;
@@ -946,7 +1041,16 @@ void loop(void)
 		RxInPitch -= gyroADC[PITCH];
 	}
 
-#ifdef SINGLE_COPTER
+#if defined(SINGLE_AIRPLANE)
+	RxInPitch += LowpassOutServo[PITCH];
+	RxInPitch = (RxInPitch >> 3);
+	LowpassOutServo[PITCH] -= RxInPitch;
+
+    // common mode pitch but assume servos are mounted mirrored
+    // so drive is differential
+	MotorOut3 += LowpassOutServo[PITCH];
+	MotorOut5 -= LowpassOutServo[PITCH];
+#elif defined(SINGLE_COPTER) || defined(SINGLE_AIRPLANE)
 	RxInPitch += LowpassOutServo[PITCH];
 	RxInPitch = (RxInPitch >> 3);
 	LowpassOutServo[PITCH] -= RxInPitch;
@@ -1025,7 +1129,14 @@ void loop(void)
 		RxInYaw -= gyroADC[YAW];
 	}
 
-#ifdef SINGLE_COPTER
+#if defined(SINGLE_AIRPLANE)
+	RxInYaw -= LowpassOutServo[YAW];
+	RxInYaw = (RxInYaw >> 3);
+	LowpassOutServo[YAW] += RxInYaw;
+
+	MotorOut2 -= LowpassOutServo[YAW];
+	MotorOut4 -= LowpassOutServo[YAW];
+#elif defined(SINGLE_COPTER)
 	RxInYaw -= LowpassOutServo[YAW];
 	RxInYaw = (RxInYaw >> 3);
 	LowpassOutServo[YAW] += RxInYaw;
@@ -1121,7 +1232,9 @@ void loop(void)
 	//--- Output to motor ESC's ---
 	if (RxInCollective < 1 || !Armed || !GyroCalibrated)	// turn off motors if collective below 1% ???
 	{														// or  if gyros not calibrated
-#ifdef SINGLE_COPTER
+#if defined(SINGLE_AIRPLANE)
+       // do nto mess with airpane settings
+#elif defined(SINGLE_COPTER)
 		MotorOut1 = 0;
 		MotorOut2 = 84;
 		MotorOut3 = 84;
@@ -1245,7 +1358,7 @@ void CalibrateGyros(void)
 	gyroZero[YAW] 	= (gyroZero[YAW] >> 5);
 
 	GyroCalibrated = true;
-#ifdef SINGLE_COPTER
+#if defined(SINGLE_COPTER) || defined(SINGLE_AIRPLANE)
 	LowpassOutServo[ROLL]	= 84;					// Center
 	LowpassOutServo[PITCH]	= 84;					// Center
 	LowpassOutServo[YAW]	= 84;					// Center
@@ -1301,14 +1414,14 @@ void output_motor_ppm(void)
 	static int16_t MotorAdjust;
 	static uint16_t PWM_Low_Count;
 	static int8_t num_of_10uS;	
-#if defined(SINGLE_COPTER) || defined(DUAL_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER)
+#if defined(SINGLE_COPTER) || defined(SINGLE_AIRPLANE) || defined(DUAL_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER)
 	static uint8_t ServoPPMRateCount;
 #endif
 
 	// if ESC's are high, we need to turn them off
 	if (output_motor_high)
 	{
-#ifdef SINGLE_COPTER
+#if defined(SINGLE_COPTER) || defined(SINGLE_AIRPLANE)
 		// set motor limits (0 -> 100)
 		// set servo limits (0 -> 200)
 		if ( MotorOut1 < 0 ) MotorOut1 = 0;
@@ -1352,7 +1465,7 @@ void output_motor_ppm(void)
 		num_of_10uS = (ElapsedTCNT1 / 10) + 1;
 		MotorAdjust = 100 - num_of_10uS;
 
-#ifdef SINGLE_COPTER
+#if defined(SINGLE_COPTER) || defined(SINGLE_AIRPLANE)
 		// add adjustment (1mS - time already gone) to 1 channel
 		MotorOut1 += MotorAdjust;
 #else
@@ -1379,7 +1492,7 @@ void output_motor_ppm(void)
 		TIFR0 &= ~(1 << TOV0);			// clr overflow
 		TCNT0 = 0;						// reset counter
 
-#ifdef SINGLE_COPTER
+#if defined(SINGLE_COPTER) || defined(SINGLE_AIRPLANE)
 		for (i=0;i<200;i++)	
 		{
 			while (TCNT0 < 80);			// 10uS @ 8MHz = 80 // 10 @ 1MHz = 10uS
@@ -1474,7 +1587,7 @@ void output_motor_ppm(void)
 	output_motor_high = true;
 
 	// turn on pins
-#ifdef SINGLE_COPTER
+#if defined(SINGLE_COPTER) || defined(SINGLE_AIRPLANE)
 	M1 = 1;
 	if(ServoPPMRateCount==ServoPPMRateDivider)
 	{
